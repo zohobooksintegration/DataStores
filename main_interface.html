@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>CSV/XLSX File Viewer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            padding: 20px;
+            background-color: #333;
+            color: white;
+        }
+
+        #container {
+            width: 100%;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .table-container {
+            width: 100%;
+            max-height: calc(100vh - 225px);
+            overflow-x: auto; /* Horizontal scrollbar */
+            overflow-y: auto; /* Vertical scrollbar */
+            margin-top: 37px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #333;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+       /* Style the "Choose File" button */
+        input[type="file"] {
+            display: none; /* Hide the default file input */
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #333;
+            color: white;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+        }
+
+        .file-input-label:hover {
+            background-color: #555;
+        }
+
+        input[type="file"]:focus + .file-input-label {
+            outline: 2px solid #333;
+        }
+
+
+        .button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
+
+        .output-window {
+
+            position: fixed;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            width: 350px;
+            height: 500px;
+            background-color: #0d0d0d;
+            border: 1px solid #0d0d0d;
+            box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            overflow-y: auto;
+            cursor: grabbing;
+            z-index: 1;
+            visibility: hidden;
+        }
+
+        #output-window:active {
+            cursor: grabbing;
+        }
+
+        /* Styling for the close button */
+        .close-button {
+            position: absolute;
+            background-color: #a7a2a2;
+            top: 5px;
+            right: 5px;
+            cursor: pointer;
+        }
+
+        /* Styling for the content inside the window */
+        .output-content {
+            padding: 10px;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>CSV/XLSX File Viewer</h1>
+
+        <div id="container">
+        <input type="file" id="fileInput" accept=".csv,.xlsx">
+        <label for="fileInput" class="file-input-label">Choose CSV File</label>
+        <div class="table-container">
+            <table id="dataTable"></table>
+        </div>
+
+        
+
+        <button id="confirmationButton" style="background-color: #333; color: #fff; border: none; border-radius: 5px; padding: 10px 20px; cursor: pointer; font-size: 16px;">Add Data to Zoho Books</button>
+        
+        <!-- Add the "Remove File" button -->
+        <button id="removeFileButton" style="background-color: #ff4444; color: #fff; border: none; border-radius: 5px; padding: 10px 20px; cursor: pointer; font-size: 16px; margin-left: 10px;">Remove File</button>
+
+        <div class="output-window">
+            <span class="close-button" onclick="closeOutputWindow()">&#10006;</span>
+            <div class="output-content">
+                <!-- Content from PHP API will be displayed here -->
+            </div>
+        </div>
+
+        <script>
+
+        document.getElementById("confirmationButton").addEventListener("click", function() {
+            // Check if a file has been selected for upload
+            var fileInput = document.getElementById("fileInput");
+            if (fileInput.files.length === 0) {
+                alert("Please select a file for upload.");
+                return; // Stop further execution
+            }
+
+
+        //     if (!fileInput.name.endsWith(".csv")) {
+        //     alert("Please make sure the file is a CSV.");
+        //     return; // Stop further execution
+
+        // }
+
+            
+
+            if (confirm("Are you sure you want to upload the sheet?")) {
+
+                // If the user clicks "Yes" in the confirmation dialog, redirect to the desired URL
+                // window.location.href = "www.4chan.org";               
+
+                function showOutputWindow() {
+                    var outputWindow = document.querySelector(".output-window");
+                    outputWindow.style.visibility = "visible";
+                }
+
+                showOutputWindow();
+
+                var outputWindow = document.getElementById("output-window");
+                var isDragging = false;
+                var offsetX, offsetY;
+
+                // Function to start dragging the window
+                function startDrag(event) {
+                    isDragging = true;
+                    offsetX = event.clientX - outputWindow.getBoundingClientRect().left;
+                    offsetY = event.clientY - outputWindow.getBoundingClientRect().top;
+                }
+
+                // Function to stop dragging the window
+                function stopDrag() {
+                    isDragging = false;
+                }
+
+                // Function to move the window while dragging
+                function dragWindow(event) {
+                    if (isDragging) {
+                        var x = event.clientX - offsetX;
+                        var y = event.clientY - offsetY;
+
+                        // Set the new position of the window
+                        outputWindow.style.left = x + "px";
+                        outputWindow.style.top = y + "px";
+                    }
+                }
+
+                // Function to close the output window
+                function closeOutputWindow() {
+                    outputWindow.style.display = "none";
+                }
+
+                // Add event listeners for dragging
+                outputWindow.addEventListener("mousedown", startDrag);
+                window.addEventListener("mouseup", stopDrag);
+                window.addEventListener("mousemove", dragWindow);
+
+                var xhr = new XMLHttpRequest();
+                xhr.open("GET", "Add.php", true);
+
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        // Update the content in the "output-content" div with the response
+                        document.querySelector(".output-content").innerHTML = xhr.responseText;
+                    }
+                };
+
+                xhr.send();
+
+                // Function to load content from the PHP API
+                function loadContentFromAPI() {
+                    // Make an AJAX request to your PHP API here and update the .output-content div with the retrieved data
+                    // Example using fetch API:
+                    fetch('C:\Users\brady\Desktop\workAdd.php')
+                        .then(response => response.json())
+                        .then(data => {
+                            // Update the .output-content div with the API data
+                            document.querySelector(".output-content").innerHTML = JSON.stringify(data);
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                        });
+                }
+
+                // Load content when the page loads (you can call this function when needed)
+                loadContentFromAPI();
+
+            }
+        });
+
+        function closeOutputWindow() {
+            document.querySelector(".output-window").style.display = "none";
+        }
+
+
+        // Optional: Trigger file input when the button is clicked
+        document.getElementById("confirmationButton").addEventListener("click", function() {
+
+            // document.getElementById("fileInput").click();
+
+        });
+
+        document.getElementById("removeFileButton").addEventListener("click", function() {
+                // Reset the file input
+                var fileInput = document.getElementById("fileInput");
+                fileInput.value = ""; // Clear the selected file
+
+                // Clear the table
+                var dataTable = document.getElementById("dataTable");
+                dataTable.innerHTML = "";
+
+                // Close the output window if open
+                closeOutputWindow();
+            });
+        
+        </script>
+
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script></script>
+    <script>
+        document.getElementById('fileInput').addEventListener('change', handleFile);
+
+        function handleFile(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    const contents = e.target.result;
+
+                    if (file.name.endsWith('.csv')) {
+                        handleCSV(contents);
+                    } else if (file.name.endsWith('.xlsx')) {
+                        handleXLSX(contents);
+                    }
+                };
+
+                reader.readAsBinaryString(file);
+            }
+        }
+
+        function handleCSV(contents) {
+            Papa.parse(contents, {
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    const data = results.data;
+                    const table = document.getElementById('dataTable');
+                    table.innerHTML = '';
+
+                    if (data.length > 0) {
+                        const headerRow = document.createElement('tr');
+
+                        for (const header in data[0]) {
+                            const th = document.createElement('th');
+                            th.textContent = header;
+                            headerRow.appendChild(th);
+                        }
+
+                        table.appendChild(headerRow);
+                    }
+
+                    data.forEach(function(row) {
+                        const dataRow = document.createElement('tr');
+
+                        for (const value in row) {
+                            const td = document.createElement('td');
+                            td.textContent = row[value];
+                            dataRow.appendChild(td);
+                        }
+
+                        table.appendChild(dataRow);
+                    });
+                }
+            });
+        }
+
+        function handleXLSX(contents) {
+            const workbook = XLSX.read(contents, { type: 'binary' });
+            const firstSheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[firstSheetName];
+
+            const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+            const table = document.getElementById('dataTable');
+            table.innerHTML = '';
+
+            if (data.length > 0) {
+                const headerRow = document.createElement('tr');
+
+                for (const header of data[0]) {
+                    const th = document.createElement('th');
+                    th.textContent = header;
+                    headerRow.appendChild(th);
+                }
+
+                table.appendChild(headerRow);
+            }
+
+            for (let i = 1; i < data.length; i++) {
+                const dataRow = document.createElement('tr');
+
+                for (const value of data[i]) {
+                    const td = document.createElement('td');
+                    td.textContent = value;
+                    dataRow.appendChild(td);
+                }
+
+                table.appendChild(dataRow);
+            }
+        }
+
+
+        function doAction(action, message) {
+                if (confirm(message)) {
+                //If user say 'yes' to confirm
+                console.log(action + ' is confirmed');
+                } else {
+                //If user say 'no' and cancelled the action
+                console.log(action + ' is cancelled');
+                }
+        };
+
+
+    </script>
+</body>
+</html>
